@@ -48,33 +48,37 @@
         (type lvm-device-mapping))))
 
   (file-systems
-    (cons*
-      (file-system
-        ;;(uuid "C1D9-0574")
-        (device "/dev/nvme0n1p1")
-        (mount-point "/boot")
-        (type "vfat"))
-      (file-system
-        ;;(device "/dev/mapper/yew-guix")
-        (device (uuid "43f7ca3e-c107-4f15-9756-5d3cbacad0a0"))
-        (mount-point "/")
-        (type "btrfs")
-        #;(flags '(no-atime))
-        (options "compress=zstd")
-        (dependencies mapped-devices))
-      (file-system
-        ;;(device "/dev/yew/home")
-        (device (uuid "a3602532-3527-4afc-9b40-5d01c58b5aa8"))
-        (mount-point "/home")
-        (type "ext4")
-        (dependencies mapped-devices))
-      (file-system
-        ;;(device "/dev/yew/nixos")
-        (device (uuid "ab3d691b-227a-4a05-a084-6928abbf0959"))
-        (mount-point "/nixos")
-        (type "ext4")
-        (dependencies mapped-devices))
-      %base-file-systems))
+    (append
+     (let* ((boot (file-system
+                   ;;(uuid "C1D9-0574")
+                   (device "/dev/nvme0n1p1")
+                   (mount-point "/boot")
+                   (type "vfat")))
+            (root (file-system
+                   ;;(device "/dev/mapper/yew-guix")
+                   (device (uuid "43f7ca3e-c107-4f15-9756-5d3cbacad0a0"))
+                   (mount-point "/")
+                   (type "btrfs")
+                   #;(flags '(no-atime))
+                   (options "compress=zstd")
+                   (dependencies mapped-devices)))
+            (home (file-system
+                   ;;(device "/dev/yew/home")
+                   (device (uuid "a3602532-3527-4afc-9b40-5d01c58b5aa8"))
+                   (mount-point "/home")
+                   (type "ext4")
+                   (dependencies mapped-devices)))
+            (nixos (file-system
+                    (device (uuid "ab3d691b-227a-4a05-a084-6928abbf0959"))
+                    (mount-point "/nixos")
+                    (type "ext4")
+                    (dependencies mapped-devices)))
+            (nix (file-system
+                  (device "/nixos/nix")
+                  (mount-point "/nix")
+                  (type "bind") (flags '(bind-mount))
+                  (dependencies (list nixos)))))
+       (append (list boot root home nixos nix) %base-file-systems))))
 
   (swap-devices (list (uuid "1a3915f9-c00c-4e62-ab7d-d6d7a2641e4d"))) ;; "/dev/yew/swap"
 
@@ -106,16 +110,35 @@
     (cons* linux-firmware iwlwifi-firmware broadcom-bt-firmware %base-firmware))
 
   (users
-    (cons*
-      (user-account
-        (name "fare")
-        (comment "Francois-Rene Rideau")
-        (group "users")
-        (shell (file-append zsh "/bin/zsh"))
-        ;; Adding the account to the "wheel" group makes it a sudoer.
-        (supplementary-groups '("wheel" "audio" "video")) ; in NixOS, I also have: "fare" "root" "networkmanager" "kvm" "adbusers" "plugdev" "ftp" ;; jackhill also uses "netdev" "dialout"
-        (home-directory "/home/fare"))
-      %base-user-accounts))
+   (append
+    (list
+     (user-account
+      (name "fare")
+      (comment "Francois-Rene Rideau")
+      (group "users")
+      (shell (file-append zsh "/bin/zsh"))
+      ;; Adding the account to the "wheel" group makes it a sudoer.
+      (supplementary-groups '("wheel" "audio" "video")) ; in NixOS, I also have: "fare" "root" "networkmanager" "kvm" "adbusers" "plugdev" "ftp" ;; jackhill also uses "netdev" "dialout"
+      (home-directory "/home/fare")))
+    (map (lambda (i)
+           (user-account
+            (name (format #f "nixbld~a" i))
+            (comment (format #f "Nix build user ~a" i))
+            (group "nixbld")
+            (uid (+ 30000 i))
+            (system? #t)
+            (home-directory "/var/empty")
+            (shell "/run/current-system/sw/bin/false")))
+         (iota 32 1))
+    %base-user-accounts))
+
+  (groups
+   (cons*
+    (user-group
+     (name "nixbld")
+     (id 30000)
+     (system? #t))
+    %base-groups))
 
   (keyboard-layout
     (keyboard-layout "us"))
