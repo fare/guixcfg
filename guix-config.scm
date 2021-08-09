@@ -53,13 +53,14 @@
                    ;;(uuid "C1D9-0574")
                    (device "/dev/nvme0n1p1")
                    (mount-point "/boot")
+                   (flags '(lazy-time))
                    (type "vfat")))
             (root (file-system
                    ;;(device "/dev/mapper/yew-guix")
                    (device (uuid "43f7ca3e-c107-4f15-9756-5d3cbacad0a0"))
                    (mount-point "/")
                    (type "btrfs")
-                   #;(flags '(no-atime))
+                   (flags '(lazy-time))
                    (options "compress=zstd")
                    (dependencies mapped-devices)))
             (home (file-system
@@ -67,18 +68,21 @@
                    (device (uuid "a3602532-3527-4afc-9b40-5d01c58b5aa8"))
                    (mount-point "/home")
                    (type "ext4")
+                   (flags '(lazy-time))
                    (dependencies mapped-devices)))
             (nixos (file-system
                     (device (uuid "ab3d691b-227a-4a05-a084-6928abbf0959"))
                     (mount-point "/nixos")
                     (type "ext4")
+                    (flags '(lazy-time))
                     (dependencies mapped-devices)))
-            (nix (file-system
+            (nix (file-system ;; see https://issues.guix.gnu.org/issue/35472
                   (device "/nixos/nix")
                   (mount-point "/nix")
-                  (type "bind") (flags '(bind-mount))
+                  (type "none")
+                  (flags '(bind-mount lazy-time))
                   (dependencies (list nixos)))))
-       (append (list boot root home nixos nix) %base-file-systems))))
+       (cons* boot root home nixos nix %base-file-systems))))
 
   (swap-devices (list (uuid "1a3915f9-c00c-4e62-ab7d-d6d7a2641e4d"))) ;; "/dev/yew/swap"
 
@@ -118,27 +122,9 @@
       (group "users")
       (shell (file-append zsh "/bin/zsh"))
       ;; Adding the account to the "wheel" group makes it a sudoer.
-      (supplementary-groups '("wheel" "audio" "video")) ; in NixOS, I also have: "fare" "root" "networkmanager" "kvm" "adbusers" "plugdev" "ftp" ;; jackhill also uses "netdev" "dialout"
+      (supplementary-groups '("wheel" "audio" "video" "netdev" "dialout")) ; "adbusers"
       (home-directory "/home/fare")))
-    (map (lambda (i)
-           (user-account
-            (name (format #f "nixbld~a" i))
-            (comment (format #f "Nix build user ~a" i))
-            (group "nixbld")
-            (uid (+ 30000 i))
-            (system? #t)
-            (home-directory "/var/empty")
-            (shell "/run/current-system/sw/bin/false")))
-         (iota 32 1))
     %base-user-accounts))
-
-  (groups
-   (cons*
-    (user-group
-     (name "nixbld")
-     (id 30000)
-     (system? #t))
-    %base-groups))
 
   (keyboard-layout
     (keyboard-layout "us"))
@@ -146,14 +132,8 @@
   (packages
     (append
      (map specification->package
-          '("nss-certs" "openssh" "lvm2" "btrfs-progs" "wireguard-tools"
-            "terminator" "sbcl" "screen" "zsh"
-            "fontconfig" "gs-fonts" "font-dejavu" "font-gnu-freefont"
-            "font-microsoft-web-core-fonts" "texlive-cm" "font-google-noto"
-            "xinit"
-            "ratpoison" "emacs-exwm" "stumpwm" "rlwrap"
-            ;;"sway" "gvfs"
-            ))
+          '("nss-certs" "openssh" "lvm2" "btrfs-progs" "e2fsprogs"
+            "screen" "zsh" "rlwrap"))
      %base-packages))
 
   (services
@@ -163,10 +143,6 @@
           #;(server-arguments '()) ;; disable the default '("-nolisten" "tcp") ;--- don't do it until we have a good firewall!
           (keyboard-layout keyboard-layout)
           (extra-config '()))) ;;TODO: set the device resolution
-      #;(service xfce-desktop-service-type)
-      #;(service gnome-desktop-service-type)
-      #;(service mate-desktop-service-type)
-      #;(service dhcp-client-service-type)
       (service gpm-service-type)
       (service nix-service-type
         (nix-configuration
@@ -192,12 +168,9 @@
 
       (modify-services %desktop-services
         (console-font-service-type _config =>
-         `(("tty1" . "Lat15-TerminusBold32x16")
-           ("tty2" . "Lat15-TerminusBold32x16")
-           ("tty3" . "Lat15-TerminusBold32x16")
-           ("tty4" . "Lat15-TerminusBold32x16")
-           ("tty5" . "Lat15-TerminusBold32x16")
-           ("tty6" . "Lat15-TerminusBold32x16")))
+          (map (lambda (i)
+                 (cons (format #f "tty~d" i) "Lat15-TerminusBold32x16"))
+               (iota 6 1)))
         (guix-service-type config =>
           (guix-configuration
             (inherit config)
