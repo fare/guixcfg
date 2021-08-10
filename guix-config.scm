@@ -10,7 +10,7 @@
   (srfi srfi-1))
 
 (use-service-modules
-  desktop ssh xorg virtualization);; docker)
+  desktop ssh xorg virtualization);; docker
 
 (use-package-modules
   admin certs gnome linux vpn wm
@@ -28,13 +28,13 @@
   ;; From http://guix.gnu.org/en/cookbook/en/html_node/Running-Guix-on-a-Linode-Server.html --
   ;; This goofy code will generate the grub.cfg without installing the grub bootloader on disk.
   (bootloader
-     (bootloader-configuration
-       (bootloader
-         (bootloader
-           (inherit grub-bootloader)
-           (installer #~(const #true))))
-       #;(target "/boot/guix") ;;; Won't work, because grub won't find it as a device
-       ))
+    (bootloader-configuration
+      (bootloader
+        (bootloader
+          (inherit grub-bootloader)
+          (installer #~(const #true))))
+      #;(target "/boot/guix") ;;; Won't work, because grub won't find it as a device
+      ))
 
   (mapped-devices
     (list
@@ -126,8 +126,11 @@
       (home-directory "/home/fare")))
     %base-user-accounts))
 
-  (keyboard-layout
-    (keyboard-layout "us"))
+  (sudoers-file (plain-file "sudoers"
+                            "root ALL=(ALL:ALL) SETENV: ALL
+%wheel ALL=(ALL:ALL) NOPASSWD:SETENV: ALL"))
+
+  (keyboard-layout (keyboard-layout "us"))
 
   (packages
     (append
