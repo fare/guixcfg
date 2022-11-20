@@ -59,8 +59,10 @@
 (def (get-mounts)
   (map (cut string-split <> #\space) (read-file-lines "/proc/mounts")))
 
+;; 1. resolve, then go up until a mount point is found?
+;; 2. call df and see what it uses
 (def (find-exact-mount x)
-  (find (lambda (l) (equal? (second l) x)) (get-mounts)))
+  (find (lambda (l) (equal? (path-normalize (second l)) (path-normalize x))) (get-mounts)))
 
 (def (readlink path) ;; TODO: use the FFI instead!
   (string-trim-eol (run-process ["readlink" path])))
@@ -74,7 +76,7 @@
     (equal? dev (string-trim-prefix "../../" (readlink (string-append ddbu u)))))
   (find dev-id? uuids))
 
-(def boot-mount (find-exact-mount "/boot"))
+(def boot-mount (find-exact-mount "/nixos/boot"))
 
 (def boot-uuid (partition-id (first boot-mount)))
 
@@ -101,16 +103,16 @@
 
 (def (in-mnt x) (string-append "/guix" x))
 
-(run-process/batch ["rsync" "-a" "--delete" (map in-mnt dirs)...  "/boot/gnu/store/"])
+(run-process/batch ["rsync" "-a" "--delete" (map in-mnt dirs)...  "/nixos/boot/gnu/store/"])
 
 (def obsolete-gnu-store-dirs
   (letrec ((up-to-date-dirs (map (cut string-trim-prefix "/gnu/store/" <>) dirs))
            (up-to-date? (lambda (dir) (member dir up-to-date-dirs))))
-    (!> (directory-files "/boot/gnu/store/")
+    (!> (directory-files "/nixos/boot/gnu/store/")
         (cut remove up-to-date? <>))))
 
-(run-process/batch ["rm" "-rf" (map (lambda (x) (string-append "/boot/gnu/store/" x))
+(run-process/batch ["rm" "-rf" (map (lambda (x) (string-append "/nixos/boot/gnu/store/" x))
                                     obsolete-gnu-store-dirs) ...])
 
 ;; Create the menu entry file
-(write-file-lines "/boot/grub/grub.cfg.guix" menu-entry)
+(write-file-lines "/nixos/boot/grub/grub.cfg.guix" menu-entry)
