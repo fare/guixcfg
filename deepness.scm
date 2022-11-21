@@ -1,41 +1,42 @@
-;; (non)guix configuration for Luna
-;; # dmidecode -s system-version ==> ThinkPad X1 Extreme Gen 5
-;; See https://wiki.archlinux.org/title/Lenovo_ThinkPad_X1_Extreme_(Gen_5)
-;; See https://github.com/dustinlyons/guix-config/blob/main/Workstation.org
-;; TODO fix Yubikey issue on Chrome. At least, it now works on firefox.
+;; (non)guix configuration for Luna, a PINE64 PinePhone Pro
+
+;; References
+;;
+;; PinePhone in general:
+;; For tow-boot, see https://wiki.mobian-project.org/doku.php?id=install-linux
+;; https://wiki.pine64.org/wiki/PinePhone_Pro_Software_Releases#Mobian
+;;
+;; Guix & Nonguix in general and for the PinePhone:
+;; https://guix.gnu.org/manual/en/guix.html
+;; https://wiki.systemcrafters.cc/guix/nonguix-installation-guide
+;; https://github.com/Schroedinger50PCT/guix-pinephone/blob/main/pinephone_config.scm
+;;
+;; Keyboard issue:
+;; https://codeberg.org/HazardChem/PinePhone_Keyboard/src/branch/main/xkb
+;; https://codeberg.org/HazardChem/PinePhone_Keyboard/src/branch/main/tty
+;; http://blog.azundris.com/archives/193-X-treme-pain-XKB-vs-XModMap.html
+;; https://wiki.archlinux.org/title/X_keyboard_extension
 
 (use-modules
   (gnu)
-  (gnu packages cups) (gnu packages fonts) (gnu packages fontutils)
   (gnu packages games) (gnu packages ghostscript) (gnu packages lisp)
   (gnu packages screen) (gnu packages shells) (gnu packages tex) (gnu packages xorg)
   (gnu services authentication) (gnu services dbus) (gnu services dict) (gnu services nix)
   (gnu services security-token) (gnu services sound)
   (gnu system nss)
-  (guix channels) (guix download) (guix inferior) (guix modules)(guix packages)
-  (nongnu packages fonts) (nongnu packages linux) (nongnu system linux-initrd)
+  (guix channels) (guix inferior) (guix modules)
+  ;;(nongnu packages fonts) ;; (nongnu packages linux) (nongnu system linux-initrd)
   (srfi srfi-1))
 
 (use-service-modules
   desktop ssh xorg virtualization);; docker
 
 (use-package-modules
-  admin certs gnome linux vpn wm
+  admin bootloaders certs cups fonts fontutils gnome linux vpn wm
   package-management ssh tls)
 
-;; Inspired by https://github.com/nanjigen/literate-configurations/blob/main/guix-configurations.org
-(define %u2f-udev-rule
-  (file->udev-rule ;; Latest (so far) from https://github.com/Yubico/libfido2/blob/main/udev/70-u2f.rules
-    "70-u2f.rules"
-    (let ((version "7b7ce2bd5e7922f063c096ed12686fd64976c565"))
-      (origin
-       (method url-fetch)
-       (uri (string-append "https://raw.githubusercontent.com/Yubico/libfido2/"
-                           version "/udev/70-u2f.rules"))
-       (sha256 (base32 "1009b1j6ns95lis2qmf3g3npc396wv9phx9fgwysbjq997c6m1vs"))))))
-
 (operating-system
-  (host-name "luna")
+  (host-name "deepness")
   (timezone "America/New_York")
   (locale "en_US.UTF-8")
 
@@ -47,50 +48,56 @@
   ;; This goofy code will generate the grub.cfg without installing the grub bootloader on disk.
   (bootloader
     (bootloader-configuration
-      (bootloader
-        (bootloader
-          (inherit grub-efi-bootloader)
-          #;(installer #~(const #true)))) ;; "/dev/nvme0n1" "(hd0)"
-      (targets '("/boot"))))
+      (bootloader u-boot-pine64-lts))
+    #;(targets '("/dev/mmcblk2p1"))
+    #;(target "/dev/mmcblk2p1"))
 
   (mapped-devices
     (list
       (mapped-device
-        (source (uuid "d825f838-477e-4dab-bc81-35b7955f08a7"))
-        (target "luna.crypt")
+        (source (uuid "e984d34b-f23f-4515-8f5f-aa8cd67fd11b"))
+        (target "deepness.crypt")
         (type luks-device-mapping))
       (mapped-device
-        (source "luna")
-        (targets (list "luna-swap" "luna-root"))
+        (source "deepness")
+        (targets (list "deepness-swap" "deepness-root"))
         (type lvm-device-mapping))))
 
   (file-systems
     (append
      (let* ((root (file-system
-                   (device "/dev/mapper/luna-root")
+                   (device "/dev/mapper/deepness-pinephone")
                    (mount-point "/")
-                   (type "btrfs")
+                   (type "brtfs")
+                   (flags '(lazy-time))
+                   (dependencies mapped-devices)))
+            (data (file-system
+                   (device "/dev/mapper/deepness-data")
+                   (mount-point "/data")
+                   (type "brtfs")
                    (flags '(lazy-time))
                    (options "compress=zstd")
                    (dependencies mapped-devices)))
             (boot (file-system
-                   ;;(uuid "F01D-F88C")
-                   (device "/dev/nvme0n1p1")
+                   ;;(uuid "FBD5-92B7")
+                   (device "/dev/mmcblk1p1")
                    (mount-point "/boot")
                    (flags '(lazy-time))
                    (type "vfat"))))
        (cons* root boot %base-file-systems))))
 
+  #; ;; Syntax not compatible with the bootstrap step using release guix 1.3.0
   (swap-devices
    (list
     (swap-space
-     (target "/dev/luna/swap")
+     (target "/dev/deepness/swap")
      (discard? #t)
      (dependencies mapped-devices))))
 
-  (kernel linux)
+  (kernel linux-libre)
   (kernel-arguments
-   '("ibt=off" ;; Video related says the ArchLinux page
+   '("iommu=soft"
+     "nvme_core.default_ps_max_latency_us=0" ;; needed to fix broken i660p m2 nvme disk on PinePhone
      "zswap.enabled=1" "zswap.compressor=zstd"
      "zswap.max_pool_percent=50" "zswap.zpool=z3fold"))
   (initrd-modules
@@ -100,9 +107,9 @@
       ;;"snd-pcm-oss" "snd-mixer-oss" ;; somehow don't get autoloaded but mplayer wants it by default
       %base-initrd-modules))
 
-  (initrd microcode-initrd)
-  (firmware (cons* linux-firmware iwlwifi-firmware #;broadcom-bt-firmware sof-firmware
-                   %base-firmware))
+  ;;(initrd microcode-initrd)
+  (firmware
+    (cons* #;linux-firmware #;ath9k-htc-firmware %base-firmware))
 
   (users
    (append
@@ -113,7 +120,7 @@
       (group "users")
       (shell (file-append zsh "/bin/zsh"))
       ;; Adding the account to the "wheel" group makes it a sudoer.
-      (supplementary-groups '("wheel" "audio" "video" "netdev" "dialout" "lp" "kvm")) ; "adbusers"
+      (supplementary-groups '("wheel" "audio" "video"))
       (home-directory "/home/fare")))
     %base-user-accounts))
 
@@ -123,7 +130,7 @@
 
   (keyboard-layout (keyboard-layout "us"))
 
-  (issue "Welcome to Luna City, birthplace of Adam Selene.\n")
+  (issue "Welcome to my Deepness in the Sky, Qeng Ho starship.\n")
 
   (packages
     (append
@@ -132,21 +139,21 @@
             #;STORAGE "btrfs-progs" "e2fsprogs" "lvm2"
             #;HARDWARE "bluez" "bluez-alsa" "cups" "inxi" ;; "light" "brightnessctl"
             #;SOUND "alsa-utils" "audacity" "aumix" "pamixer" "pavucontrol" "pulseaudio" ;;"pulsemixer" "volctl"
-            #;SYSTEM "lsof"
+            #;SYSTEM "lsof" ;;"fbterm"
             #;NETUTILS "iftop" "mtr" "nss-certs" "openssh" "rsync" "sshfs"
             #;NETAPPS "curl" "hexchat" "wget"
-            #;BROWSE "emacs-edit-server" "firefox" "ublock-origin-chromium"
-                     "ungoogled-chromium" "w3m" ;; "icecat"
+            #;BROWSE ;; "emacs-edit-server" "firefox" "ublock-origin-chromium" "ungoogled-chromium"
+                     "icecat" "w3m"
             #;FILES "findutils" "tar" "unzip" "zip"
             ;; TODO: add to nonguix fortune-mod and other related packages that were removed from guix for offending the politically correct humorlessness of some maintainers? https://debbugs.gnu.org/cgi/bugreport.cgi?bug=54691 guix commits: f592decd4d823a973600d4cdd9f3f7d3ea610429 5e174805742b2bec9f5a06c9dd208c60b9af5c14 6b6b947b6133c40f86800dc0d36a59e16ac169fc
-            #;TEXTDATA "dico" "daikichi" "fortunes-jkirchartz" "units"
+            #;TEXTDATA "dico" "daikichi" "fortunes-jkirchartz"
             #;TEXTUTILS "diffutils" "gawk" "sed" "m4" "perl" "patch" "recode" "wdiff"
-            #;LANGUAGES "make" "racket" "sbcl"
-            #;VIDEO "mplayer" "vlc"
-            #;GRAPHICS "imagemagick" "feh" "gimp" "inkscape" "qiv" ;; fbida
-            #;MARKUP "markdown" "python-docutils" "texlive" ;; "guile-commonmark"
-            #;DOCUMENTS "evince" "libreoffice" "xournal"
-            #;FONTS "font-terminus" "font-sun-misc" "font-sony-misc" "font-misc-misc" "font-adobe75dpi" "font-adobe100dpi" "font-microsoft-web-core-fonts" "font-google-noto" ;; "gs-fonts" "font-dejavu" "font-gnu-freefont" "font-google-roboto" "font-google-material-design-icons" "font-inconsolata" "font-awesome" "font-alias" "font-mathjax" "font-bitstream-vera" "texlive-lm" "texlive-cm" "texlive-cm-super" "font-bitstream-vera" "gs-fonts"
+            #;LANGUAGES ;; "make" "racket" "sbcl"
+            #;VIDEO "vlc" ;; "mplayer"
+            #;GRAPHICS "imagemagick" "feh" ;; "fbida" "gimp" "inkscape" "qiv"
+            #;MARKUP "markdown" "python-docutils" ;; "texlive" ;; "guile-commonmark"
+            #;DOCUMENTS "evince" ;; "libreoffice" "xournal"
+            #;FONTS "font-terminus" "font-sun-misc" "font-sony-misc" "font-misc-misc" "font-adobe75dpi" "font-adobe100dpi" #;"font-microsoft-web-core-fonts" "font-google-noto" ;; "gs-fonts" "font-dejavu" "font-gnu-freefont" "font-google-roboto" "font-google-material-design-icons" "font-inconsolata" "font-awesome" "font-alias" "font-mathjax" "font-bitstream-vera" "texlive-lm" "texlive-cm" "texlive-cm-super" "font-bitstream-vera" "gs-fonts"
             #;FONT-UTILS "xfontsel" "xlsfonts" ;; "gnome-font-viewer" "fontconfig" "fontmanager"
             #;XUTILS "xdpyinfo" "xmodmap" "xrandr" "xrdb" "xset" "xsetroot" "xwininfo"
             #;XPROGS "synergy" "stumpwm" "terminator" "xterm" "xscreensaver")) ;; "ratpoison"
@@ -156,8 +163,6 @@
     (cons*
       (set-xorg-configuration
         (xorg-configuration
-         (server-arguments '("-dpi" "189")) ;; Mimic what nixos does witht the DPI setting?
-         ;; disable the default '("-nolisten" "tcp") ;--- don't do it until we have a good firewall!
           #;(server-arguments '()) ;; disable the default '("-nolisten" "tcp") ;--- don't do it until we have a good firewall!
           (keyboard-layout keyboard-layout)
           (extra-config '()))) ;;TODO: set the device resolution
@@ -181,7 +186,7 @@
           (authorized-keys
             `(("fare" ,(local-file "/home/fare/.ssh/id_rsa.pub"))
               ("root" ,(local-file "/home/fare/.ssh/id_rsa.pub"))))))
-      #;(service fprintd-service-type)
+      (service fprintd-service-type)
       (service pcscd-service-type)
       (pam-limits-service
         (list
@@ -201,12 +206,8 @@
         (console-font-service-type _config =>
           (map (lambda (i)
                  (cons (format #f "tty~d" i)
-                       (file-append font-terminus "/share/consolefonts/ter-v32i.psf.gz")))
+                       (file-append font-terminus "/share/consolefonts/ter-v24i.psf.gz")))
                (iota 6 1)))
-        (udev-service-type config =>
-                           (udev-configuration (inherit config)
-                                               (rules (cons %u2f-udev-rule
-                                                            (udev-configuration-rules config)))))
         (guix-service-type config =>
           (guix-configuration
             (inherit config)
@@ -223,3 +224,4 @@
 
   ;; Allow resolution of '.local' host names with mDNS.
   #;(name-service-switch %mdns-host-lookup-nss))
+

@@ -1,22 +1,32 @@
 : 'Initialize the metasystem with the following:
 
-mount /dev/nvme0n1p1 /mnt
-. /mnt/foo
+mount /dev/mmcblk1p1 /mnt
+. /mnt/ia.sh
 ini
 
 '
 
+disk=mmcblk1
+host=deepness
+bootpart=${disk}p1
+cryptpart=${disk}p2
 
 ### Code below
 
 ini () {
  (set -x
   umount /mnt
-  cryptsetup luksOpen /dev/nvme0n1p2 luna.crypt
+  cryptsetup luksOpen /dev/${cryptpart} ${host}.crypt
   vgchange -ay
-  swapon /dev/mapper/luna-swap
-  mount /dev/mapper/luna-root /mnt
-  mount /dev/nvme0n1p1 /mnt/boot
+  swapon /dev/mapper/${host}-swap
+  ####vvv
+  mount /dev/${host}/pinephone /mnt
+  mkdir -p /mnt/data
+  mount /dev/${host}/data /mnt/data
+  #mount /dev/${bootpart} /mnt/boot
+  mount --rbind /boot /mnt/boot
+  ####^^^
+  mkdir -p /mnt/sys /mnt/proc /mnt/dev /mnt/run /mnt/tmp /mnt/gnu /mnt/var/guix /mnt/gnu/store /mnt/root
   mount --rbind /sys /mnt/sys
   mount --rbind /sys /mnt/sys
   mount --rbind /proc /mnt/proc
@@ -24,10 +34,9 @@ ini () {
   mount --rbind /run /mnt/run
   #mount --rbind /tmp /mnt/tmp
   mount -t tmpfs tmpfs /mnt/tmp
-  mkdir -p /gnu
   mount --bind /mnt/gnu /gnu
-  #mkdir -p /mnt/var/guix
   ln -s /mnt/var/guix /var/
+  mount --bind /mnt/root /root
 
   cp /etc/ssh/*key* /etc/ssh/
   service ssh start
@@ -43,8 +52,8 @@ ini () {
   )
 }
 
-ie () {
-  apt update ; apt install -y emacs screen less zsh
+ip () {
+  apt update ; apt install -y emacs screen less zsh btrfs-progs
 }
 
 im () {
@@ -54,11 +63,11 @@ im () {
 }
 
 f () {
-  . /mnt/boot/foo
+  . /mnt/boot/ia.sh
 }
 
 re () {
-  im guix system reconfigure /boot/luna.scm
+  im guix system reconfigure /boot/${host}.scm
 }
 
 fix () {
