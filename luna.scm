@@ -6,18 +6,18 @@
 
 (use-modules
   (gnu)
-  (gnu packages cups) (gnu packages fonts) (gnu packages fontutils)
-  (gnu packages games) (gnu packages ghostscript) (gnu packages lisp)
-  (gnu packages screen) (gnu packages shells) (gnu packages tex) (gnu packages xorg)
-  (gnu services authentication) (gnu services dbus) (gnu services dict) (gnu services nix)
-  (gnu services security-token) (gnu services sound)
   (gnu system nss)
-  (guix channels) (guix download) (guix inferior) (guix modules)(guix packages)
+  (guix channels) (guix download) (guix inferior) (guix modules) (guix packages) (guix transformations)
   (nongnu packages fonts) (nongnu packages linux) (nongnu system linux-initrd)
+  (nongnu packages nvidia) ;; NVIDIA -- all nvidia related lines are commented with this tag
   (srfi srfi-1))
 
 (use-service-modules
-  desktop ssh xorg virtualization);; docker
+  authentication cups dbus desktop dict nix security-token sound ssh xorg);; virtualization docker
+
+(use-package-modules
+  admin bootloaders certs cups fonts fontutils games ghostscript gnome linux lisp
+  package-management screen shells ssh tex tls vpn wm xdisorg xorg)
 
 (use-package-modules
   admin certs gnome linux vpn wm
@@ -34,6 +34,20 @@
                            version "/udev/70-u2f.rules"))
        (sha256 (base32 "1009b1j6ns95lis2qmf3g3npc396wv9phx9fgwysbjq997c6m1vs"))))))
 
+;; For NVIDIA support, see https://gitlab.com/nonguix/nonguix/-/issues/198
+#;(define transform (options->transformation '((with-graft . "mesa=nvda")))) ;; NVIDIA
+
+(define my-fonts
+  (list font-terminus
+        font-sun-misc font-sony-misc font-misc-misc font-adobe75dpi font-adobe100dpi
+        font-google-noto font-google-roboto font-google-material-design-icons
+        font-microsoft-web-core-fonts ;; font-bitstream-vera
+        font-dejavu gs-fonts font-gnu-freefont ;; already there
+        ;; font-alias font-awesome font-bitstream-vera font-gnu-freefont font-inconsolata font-mathjax
+        ;; texlive-cm texlive-cm-super texlive-lm
+        ))
+
+
 (operating-system
   (host-name "luna")
   (timezone "America/New_York")
@@ -49,33 +63,35 @@
     (bootloader-configuration
       (bootloader
         (bootloader
-          (inherit grub-efi-bootloader)
+          (inherit grub-efi-removable-bootloader)
           #;(installer #~(const #true)))) ;; "/dev/nvme0n1" "(hd0)"
       (targets '("/boot"))))
 
   (mapped-devices
     (list
       (mapped-device
-        (source (uuid "d825f838-477e-4dab-bc81-35b7955f08a7"))
-        (target "luna.crypt")
+        (source (uuid "9baf17ae-4031-44d6-a384-efd38895ee9d"))
+        (target "lunacity.crypt")
         (type luks-device-mapping))
       (mapped-device
-        (source "luna")
-        (targets (list "luna-swap" "luna-root"))
+        (source "lunacity")
+        (targets (list "lunacity-swap" "lunacity-root"))
         (type lvm-device-mapping))))
 
   (file-systems
     (append
      (let* ((root (file-system
-                   (device "/dev/mapper/luna-root")
+                   (device "/dev/mapper/lunacity-root")
                    (mount-point "/")
                    (type "btrfs")
                    (flags '(lazy-time))
                    (options "compress=zstd")
                    (dependencies mapped-devices)))
             (boot (file-system
-                   ;;(uuid "F01D-F88C")
-                   (device "/dev/nvme0n1p1")
+                   (device (uuid "CD34-D3C9" 'fat))
+                   ;;(device "/dev/nvme0n1p1")
+                   ;;(device "/dev/mmcblk0p1")
+                   ;;(device "/dev/sda1")
                    (mount-point "/boot")
                    (flags '(lazy-time))
                    (type "vfat"))))
@@ -84,15 +100,19 @@
   (swap-devices
    (list
     (swap-space
-     (target "/dev/luna/swap")
+     (target "/dev/lunacity/swap")
      (discard? #t)
      (dependencies mapped-devices))))
 
   (kernel linux)
   (kernel-arguments
-   '("ibt=off" ;; Video related says the ArchLinux page
-     "zswap.enabled=1" "zswap.compressor=zstd"
-     "zswap.max_pool_percent=50" "zswap.zpool=z3fold"))
+    (cons*
+      "ibt=off" ;; Video related says the ArchLinux page
+      #;"modprobe.blacklist=nouveau" ;; NVIDIA
+      "zswap.enabled=1" "zswap.compressor=zstd" ;; for btrfs
+      "zswap.max_pool_percent=50" "zswap.zpool=z3fold"
+      %default-kernel-arguments))
+  #;(kernel-loadable-modules (list nvidia-driver)) ;; NVIDIA
   (initrd-modules
     (cons*
       "zstd" "z3fold"
@@ -129,38 +149,45 @@
     (append
      (map specification->package
           '(#;SURVIVE "emacs" "git" "rlwrap" "screen" "zsh"
-            #;STORAGE "btrfs-progs" "e2fsprogs" "lvm2"
+            #;STORAGE "btrfs-progs" "cryptsetup" "e2fsprogs" "lvm2"
             #;HARDWARE "bluez" "bluez-alsa" "cups" "inxi" ;; "light" "brightnessctl"
             #;SOUND "alsa-utils" "audacity" "aumix" "pamixer" "pavucontrol" "pulseaudio" ;;"pulsemixer" "volctl"
             #;SYSTEM "lsof"
-            #;NETUTILS "iftop" "mtr" "nss-certs" "openssh" "rsync" "sshfs"
+            #;BUILD "gcc-toolchain" "linux-libre-headers" "make" "racket" "sbcl"
+            #;NETUTILS "iftop" "mtr" "nss-certs" "openssh" "rsync" "sshfs" "oath-toolkit"
             #;NETAPPS "curl" "hexchat" "wget"
             #;BROWSE "emacs-edit-server" "firefox" "ublock-origin-chromium"
-                     "ungoogled-chromium" "w3m" ;; "icecat"
+                     "ungoogled-chromium" "w3m" "icecat" ;; "lynx"
+            #;COMMS "hexchat" "signal-desktop" #;"telegram-cli" "telegram-desktop"
             #;FILES "findutils" "tar" "unzip" "zip"
             ;; TODO: add to nonguix fortune-mod and other related packages that were removed from guix for offending the politically correct humorlessness of some maintainers? https://debbugs.gnu.org/cgi/bugreport.cgi?bug=54691 guix commits: f592decd4d823a973600d4cdd9f3f7d3ea610429 5e174805742b2bec9f5a06c9dd208c60b9af5c14 6b6b947b6133c40f86800dc0d36a59e16ac169fc
             #;TEXTDATA "dico" "daikichi" "fortunes-jkirchartz" "units"
             #;TEXTUTILS "diffutils" "gawk" "sed" "m4" "perl" "patch" "recode" "wdiff"
-            #;LANGUAGES "make" "racket" "sbcl"
             #;VIDEO "mplayer" "vlc"
             #;GRAPHICS "imagemagick" "feh" "gimp" "inkscape" "qiv" ;; fbida
             #;MARKUP "markdown" "python-docutils" "texlive" ;; "guile-commonmark"
             #;DOCUMENTS "evince" "libreoffice" "xournal"
-            #;FONTS "font-terminus" "font-sun-misc" "font-sony-misc" "font-misc-misc" "font-adobe75dpi" "font-adobe100dpi" "font-microsoft-web-core-fonts" "font-google-noto" ;; "gs-fonts" "font-dejavu" "font-gnu-freefont" "font-google-roboto" "font-google-material-design-icons" "font-inconsolata" "font-awesome" "font-alias" "font-mathjax" "font-bitstream-vera" "texlive-lm" "texlive-cm" "texlive-cm-super" "font-bitstream-vera" "gs-fonts"
-            #;FONT-UTILS "xfontsel" "xlsfonts" ;; "gnome-font-viewer" "fontconfig" "fontmanager"
+            #;FONT-UTILS "fontconfig" "gnome-font-viewer" "xfontsel" "xlsfonts" ;; "fontmanager"
             #;XUTILS "xdpyinfo" "xmodmap" "xrandr" "xrdb" "xset" "xsetroot" "xwininfo"
             #;XPROGS "synergy" "stumpwm" "terminator" "xterm" "xscreensaver")) ;; "ratpoison"
+     my-fonts
      %base-packages))
 
   (services
     (cons*
       (set-xorg-configuration
         (xorg-configuration
-         (server-arguments '("-dpi" "189")) ;; Mimic what nixos does witht the DPI setting?
-         ;; disable the default '("-nolisten" "tcp") ;--- don't do it until we have a good firewall!
+          (server-arguments '("-dpi" "189")) ;; Mimic what nixos does witht the DPI setting?
           #;(server-arguments '()) ;; disable the default '("-nolisten" "tcp") ;--- don't do it until we have a good firewall!
           (keyboard-layout keyboard-layout)
-          (extra-config '()))) ;;TODO: set the device resolution
+          (extra-config '())
+          (fonts (append my-fonts %default-xorg-fonts))
+          #;(server (transform xorg-server)) ;; NVIDIA
+          #;(modules (cons* nvidia-driver %default-xorg-modules)) ;; NVIDIA
+          #;(drivers '("nvidia")))) ;; NVIDIA
+      ;;#;(service kernel-module-loader-service-type '("nvidia_uvm")) ;; NVIDIA
+      #;(simple-service 'custom-udev-rules udev-service-type (list nvidia-driver)) ;; NVIDIA
+      (screen-locker-service xlockmore "xlock") ;; Use xscreensaver instead?
       (bluetooth-service #:auto-enable? #t)
       (service gpm-service-type)
       #;(service nix-service-type
@@ -191,12 +218,11 @@
       #;(service virtlog-service-type (virtlog-configuration (max-clients 1000)))
       #;(service singularity-service-type)
       #;(service docker-service-type)
-      #;(service cups-service-type
+      (service cups-service-type
         (cups-configuration
           (web-interface? #t)
           (extensions
-           (list brlaser cups-filters epson-inkjet-printer-escpr foomatic-filters
-                 hplip-minimal splix)))) ;; gutenprint
+           (list brlaser cups-filters foomatic-filters)))) ;; epson-inkjet-printer-escpr hplip-minimal splix gutenprint
       (modify-services %desktop-services
         (console-font-service-type _config =>
           (map (lambda (i)
@@ -210,16 +236,18 @@
         (guix-service-type config =>
           (guix-configuration
             (inherit config)
-            (substitute-urls (cons* "http://guix.drewc.ca:8080/"
+            (substitute-urls (cons* ;;"http://guix.drewc.ca:8080/"
                                     "https://substitutes.nonguix.org"
+                                    "https://bordeaux.guix.gnu.org"
                                     %default-substitute-urls))
             (authorized-keys (cons* (local-file "./nonguix-key.pub")
+                                    (local-file "./bordeaux-key.pub")
                                     %default-authorized-guix-keys))))
         (pulseaudio-service-type config =>
           (pulseaudio-configuration
-           (inherit config)
-           #;(script-file (local-file "/etc/guix/default.pa")) ;; ???
-           )))))
+            (inherit config)
+            #;(script-file (local-file "/etc/guix/default.pa")) ;; ???
+            )))))
 
   ;; Allow resolution of '.local' host names with mDNS.
   #;(name-service-switch %mdns-host-lookup-nss))

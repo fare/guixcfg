@@ -1,5 +1,8 @@
 ;; (non)guix configuration for Luna, a PINE64 PinePhone Pro
 
+;; Built at this commit: guix pull --commit=eb5e650
+
+
 ;; References
 ;;
 ;; PinePhone in general:
@@ -18,22 +21,27 @@
 ;; https://wiki.archlinux.org/title/X_keyboard_extension
 
 (use-modules
-  (gnu)
-  (gnu packages games) (gnu packages ghostscript) (gnu packages lisp)
-  (gnu packages screen) (gnu packages shells) (gnu packages tex) (gnu packages xorg)
-  (gnu services authentication) (gnu services dbus) (gnu services dict) (gnu services nix)
-  (gnu services security-token) (gnu services sound)
-  (gnu system nss)
+  (gnu) (gnu bootloader u-boot) (gnu system nss)
   (guix channels) (guix inferior) (guix modules)
   ;;(nongnu packages fonts) ;; (nongnu packages linux) (nongnu system linux-initrd)
   (srfi srfi-1))
 
 (use-service-modules
-  desktop ssh xorg virtualization);; docker
+  authentication dbus desktop dict nix security-token sound ssh xorg);; virtualization docker
 
 (use-package-modules
-  admin bootloaders certs cups fonts fontutils gnome linux vpn wm
-  package-management ssh tls)
+  admin bootloaders certs cups fonts fontutils games ghostscript gnome linux lisp
+  package-management screen shells ssh tex tls vpn wm xorg)
+
+(define my-fonts
+  (list font-terminus
+        font-sun-misc font-sony-misc font-misc-misc font-adobe75dpi font-adobe100dpi
+        font-google-noto font-google-roboto font-google-material-design-icons
+        ;;font-microsoft-web-core-fonts ;; font-bitstream-vera
+        font-dejavu gs-fonts font-gnu-freefont ;; already there
+        ;; font-alias font-awesome font-bitstream-vera font-gnu-freefont font-inconsolata font-mathjax
+        ;; texlive-cm texlive-cm-super texlive-lm
+        ))
 
 (operating-system
   (host-name "deepness")
@@ -46,11 +54,9 @@
   ;; with the guix-boot.ss script (written in Gerbil Scheme).
   ;; From http://guix.gnu.org/en/cookbook/en/html_node/Running-Guix-on-a-Linode-Server.html --
   ;; This goofy code will generate the grub.cfg without installing the grub bootloader on disk.
-  (bootloader
-    (bootloader-configuration
-      (bootloader u-boot-pine64-lts))
-    #;(targets '("/dev/mmcblk2p1"))
-    #;(target "/dev/mmcblk2p1"))
+  (bootloader (bootloader-configuration
+                (bootloader u-boot-pine64-lts-bootloader)
+                (targets '("/dev/mmcblk2"))))
 
   (mapped-devices
     (list
@@ -86,7 +92,6 @@
                    (type "vfat"))))
        (cons* root boot %base-file-systems))))
 
-  #; ;; Syntax not compatible with the bootstrap step using release guix 1.3.0
   (swap-devices
    (list
     (swap-space
@@ -94,7 +99,7 @@
      (discard? #t)
      (dependencies mapped-devices))))
 
-  (kernel linux-libre)
+  (kernel linux-libre-arm64-generic)
   (kernel-arguments
    '("iommu=soft"
      "nvme_core.default_ps_max_latency_us=0" ;; needed to fix broken i660p m2 nvme disk on PinePhone
@@ -103,7 +108,6 @@
   (initrd-modules
     (cons*
       "zstd" "z3fold"
-      "video" "i915"
       ;;"snd-pcm-oss" "snd-mixer-oss" ;; somehow don't get autoloaded but mplayer wants it by default
       %base-initrd-modules))
 
@@ -135,15 +139,17 @@
   (packages
     (append
      (map specification->package
-          '(#;SURVIVE "emacs" "git" "rlwrap" "screen" "zsh"
-            #;STORAGE "btrfs-progs" "e2fsprogs" "lvm2"
+          '(#;SURVIVE #;"emacs" "git" "rlwrap" "screen" "zsh"
+            #;STORAGE "btrfs-progs" "cryptsetup" "e2fsprogs" "lvm2"
+            #;SYSTEM "lsof" ;;"fbterm"
+            #;NETUTILS "iftop" "mtr" "nss-certs" "openssh" "rsync" "sshfs"))
+     #|
             #;HARDWARE "bluez" "bluez-alsa" "cups" "inxi" ;; "light" "brightnessctl"
             #;SOUND "alsa-utils" "audacity" "aumix" "pamixer" "pavucontrol" "pulseaudio" ;;"pulsemixer" "volctl"
-            #;SYSTEM "lsof" ;;"fbterm"
-            #;NETUTILS "iftop" "mtr" "nss-certs" "openssh" "rsync" "sshfs"
             #;NETAPPS "curl" "hexchat" "wget"
             #;BROWSE ;; "emacs-edit-server" "firefox" "ublock-origin-chromium" "ungoogled-chromium"
                      "icecat" "w3m"
+            ;;#;COMMS "hexchat" "signal-desktop" #;"telegram-cli" "telegram-desktop"
             #;FILES "findutils" "tar" "unzip" "zip"
             ;; TODO: add to nonguix fortune-mod and other related packages that were removed from guix for offending the politically correct humorlessness of some maintainers? https://debbugs.gnu.org/cgi/bugreport.cgi?bug=54691 guix commits: f592decd4d823a973600d4cdd9f3f7d3ea610429 5e174805742b2bec9f5a06c9dd208c60b9af5c14 6b6b947b6133c40f86800dc0d36a59e16ac169fc
             #;TEXTDATA "dico" "daikichi" "fortunes-jkirchartz"
@@ -153,28 +159,28 @@
             #;GRAPHICS "imagemagick" "feh" ;; "fbida" "gimp" "inkscape" "qiv"
             #;MARKUP "markdown" "python-docutils" ;; "texlive" ;; "guile-commonmark"
             #;DOCUMENTS "evince" ;; "libreoffice" "xournal"
-            #;FONTS "font-terminus" "font-sun-misc" "font-sony-misc" "font-misc-misc" "font-adobe75dpi" "font-adobe100dpi" #;"font-microsoft-web-core-fonts" "font-google-noto" ;; "gs-fonts" "font-dejavu" "font-gnu-freefont" "font-google-roboto" "font-google-material-design-icons" "font-inconsolata" "font-awesome" "font-alias" "font-mathjax" "font-bitstream-vera" "texlive-lm" "texlive-cm" "texlive-cm-super" "font-bitstream-vera" "gs-fonts"
             #;FONT-UTILS "xfontsel" "xlsfonts" ;; "gnome-font-viewer" "fontconfig" "fontmanager"
             #;XUTILS "xdpyinfo" "xmodmap" "xrandr" "xrdb" "xset" "xsetroot" "xwininfo"
-            #;XPROGS "synergy" "stumpwm" "terminator" "xterm" "xscreensaver")) ;; "ratpoison"
+            #;XPROGS "synergy" "stumpwm" "terminator" "xterm" "xscreensaver" ;; "ratpoison"
+     |#
      %base-packages))
 
   (services
     (cons*
-      (set-xorg-configuration
+     #;(set-xorg-configuration
         (xorg-configuration
           #;(server-arguments '()) ;; disable the default '("-nolisten" "tcp") ;--- don't do it until we have a good firewall!
           (keyboard-layout keyboard-layout)
           (extra-config '()))) ;;TODO: set the device resolution
       (bluetooth-service #:auto-enable? #t)
-      (service gpm-service-type)
+      #;(service gpm-service-type)
       #;(service nix-service-type
         (nix-configuration
           (extra-config
            '("substituters = https://cache.nixos.org https://cache.nixos.org/ https://hydra.iohk.io https://iohk.cachix.org https://mukn.cachix.org\n"
              "trusted-substituters = https://cache.nixos.org https://cache.nixos.org/ https://hydra.iohk.io https://iohk.cachix.org https://mukn.cachix.org\n"
       "trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= hydra.goguen-ala-cardano.dev-mantis.iohkdev.io-1:wh2Nepc/RGAY2UMvY5ugsT8JOz84BKLIpFbn7beZ/mo= mukn.cachix.org-1:ujoZLZMpGNQMeZbLBxmOcO7aj+7E5XSnZxwFpuhhsqs=\n"))))
-      (dicod-service #:config
+      #;(dicod-service #:config
        (dicod-configuration
         (databases (list ;; TODO: package and add other databases?
                     %dicod-database:gcide))))
@@ -186,9 +192,9 @@
           (authorized-keys
             `(("fare" ,(local-file "/home/fare/.ssh/id_rsa.pub"))
               ("root" ,(local-file "/home/fare/.ssh/id_rsa.pub"))))))
-      (service fprintd-service-type)
-      (service pcscd-service-type)
-      (pam-limits-service
+      #;(service fprintd-service-type)
+      #;(service pcscd-service-type)
+      #;(pam-limits-service
         (list
           (pam-limits-entry "@audio" 'both 'rtprio 99)
           (pam-limits-entry "@audio" 'both 'memlock 'unlimited)))
@@ -202,7 +208,8 @@
           (extensions
            (list brlaser cups-filters epson-inkjet-printer-escpr foomatic-filters
                  hplip-minimal splix)))) ;; gutenprint
-      (modify-services %desktop-services
+      (modify-services %base-services ;; %desktop-services
+        (delete gdm-service-type) (delete gdm-file-system-service)
         (console-font-service-type _config =>
           (map (lambda (i)
                  (cons (format #f "tty~d" i)
@@ -211,10 +218,13 @@
         (guix-service-type config =>
           (guix-configuration
             (inherit config)
-            (substitute-urls (cons* "http://guix.drewc.ca:8080/"
-                                    "https://substitutes.nonguix.org"
-                                    %default-substitute-urls))
+            (substitute-urls (cons*
+                              ;;"http://guix.drewc.ca:8080/"
+                              "https://substitutes.nonguix.org"
+                              "https://bordeaux.guix.gnu.org"
+                              %default-substitute-urls))
             (authorized-keys (cons* (local-file "./nonguix-key.pub")
+                                    (local-file "./bordeaux-key.pub")
                                     %default-authorized-guix-keys))))
         (pulseaudio-service-type config =>
           (pulseaudio-configuration
@@ -224,4 +234,3 @@
 
   ;; Allow resolution of '.local' host names with mDNS.
   #;(name-service-switch %mdns-host-lookup-nss))
-

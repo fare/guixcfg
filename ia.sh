@@ -6,10 +6,12 @@ ini
 
 '
 
-disk=mmcblk1
-host=deepness
-bootpart=${disk}p1
-cryptpart=${disk}p2
+disk=sda
+host=lunacity
+part=${disk}
+#part=${disk}p
+bootpart=${part}1
+cryptpart=${part}2
 
 ### Code below
 
@@ -20,13 +22,17 @@ ini () {
   vgchange -ay
   swapon /dev/mapper/${host}-swap
   ####vvv
-  mount /dev/${host}/pinephone /mnt
-  mkdir -p /mnt/data
-  mount /dev/${host}/data /mnt/data
-  #mount /dev/${bootpart} /mnt/boot
-  mount --rbind /boot /mnt/boot
+  mount /dev/${host}/root /mnt
+  mount /dev/${bootpart} /mnt/boot
+  ###
+  #mount /dev/${host}/pinephone /mnt
+  #mkdir -p /mnt/data
+  #mount /dev/${host}/data /mnt/data
+  #mount --rbind /boot /mnt/boot
   ####^^^
   mkdir -p /mnt/sys /mnt/proc /mnt/dev /mnt/run /mnt/tmp /mnt/gnu /mnt/var/guix /mnt/gnu/store /mnt/root
+  mkdir -p /gnu /var/guix
+
   mount --rbind /sys /mnt/sys
   mount --rbind /sys /mnt/sys
   mount --rbind /proc /mnt/proc
@@ -34,9 +40,11 @@ ini () {
   mount --rbind /run /mnt/run
   #mount --rbind /tmp /mnt/tmp
   mount -t tmpfs tmpfs /mnt/tmp
+
   mount --bind /mnt/gnu /gnu
-  ln -s /mnt/var/guix /var/
-  mount --bind /mnt/root /root
+  mount --bind /mnt/var/guix /var/guix
+  #mount --bind /mnt/root /root
+  #mount --bind /mnt/boot /boot
 
   cp /etc/ssh/*key* /etc/ssh/
   service ssh start
@@ -48,8 +56,13 @@ ini () {
             -c "Guix build user $i" --system \
             "guixbuilder${i}";
   done
-  im guix-daemon --build-users-group=guixbuild &
+  #im guix-daemon --build-users-group=guixbuild &
+  guix-daemon --build-users-group=guixbuild &
   )
+}
+
+mf () {
+  PATH=/run/setuid-programs:$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin:$HOME/.config/guix/current/bin:/run/current-system/profile/bin:/run/current-system/profile/sbin:/var/guix/profiles/system/profile/bin:/var/guix/profiles/system/profile/sbin:/bin:/sbin PSX="mnt " HOME=/home/fare chroot /mnt zsh
 }
 
 ip () {

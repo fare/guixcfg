@@ -1,0 +1,2 @@
+# Can this be replaced by a static server hosted on gitlab.io ?
+sudo guix publish --user=fare
