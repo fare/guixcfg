@@ -7,7 +7,7 @@ ini
 '
 
 disk=sda
-host=lunacity
+host=yew2
 part=${disk}
 #part=${disk}p
 bootpart=${part}1
@@ -15,14 +15,14 @@ cryptpart=${part}2
 
 ### Code below
 
-ini () {
- (set -x
+inimnt () {
   umount /mnt
   cryptsetup luksOpen /dev/${cryptpart} ${host}.crypt
   vgchange -ay
   swapon /dev/mapper/${host}-swap
   ####vvv
-  mount /dev/${host}/root /mnt
+  mount /dev/${host}/guix /mnt
+  mount /dev/${host}/nixos /mnt/nixos
   mount /dev/${bootpart} /mnt/boot
   ###
   #mount /dev/${host}/pinephone /mnt
@@ -30,6 +30,9 @@ ini () {
   #mount /dev/${host}/data /mnt/data
   #mount --rbind /boot /mnt/boot
   ####^^^
+}
+
+inimnt2 () {
   mkdir -p /mnt/sys /mnt/proc /mnt/dev /mnt/run /mnt/tmp /mnt/gnu /mnt/var/guix /mnt/gnu/store /mnt/root
   mkdir -p /gnu /var/guix
 
@@ -45,10 +48,11 @@ ini () {
   mount --bind /mnt/var/guix /var/guix
   #mount --bind /mnt/root /root
   #mount --bind /mnt/boot /boot
+}
 
-  cp /etc/ssh/*key* /etc/ssh/
-  service ssh start
-
+inicfg () {
+  cp /mnt/home/fare/etc/term/screenrc /root/.screenrc
+  cp /mnt/etc/ssh/*key* /etc/ssh/
   groupadd --system guixbuild
   for i in $(seq -w 1 10); do
     useradd -g guixbuild -G guixbuild \
@@ -56,16 +60,21 @@ ini () {
             -c "Guix build user $i" --system \
             "guixbuilder${i}";
   done
+}
+
+iniserv () {
+  service ssh start
   #im guix-daemon --build-users-group=guixbuild &
   guix-daemon --build-users-group=guixbuild &
-  )
 }
+
+ini () { (set -x; inimnt; inimnt2; inicfg; iniserv) }
 
 mf () {
   PATH=/run/setuid-programs:$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin:$HOME/.config/guix/current/bin:/run/current-system/profile/bin:/run/current-system/profile/sbin:/var/guix/profiles/system/profile/bin:/var/guix/profiles/system/profile/sbin:/bin:/sbin PSX="mnt " HOME=/home/fare chroot /mnt zsh
 }
 
-ip () {
+aip () {
   apt update ; apt install -y emacs screen less zsh btrfs-progs
 }
 

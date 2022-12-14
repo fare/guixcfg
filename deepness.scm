@@ -20,6 +20,8 @@
 ;; http://blog.azundris.com/archives/193-X-treme-pain-XKB-vs-XModMap.html
 ;; https://wiki.archlinux.org/title/X_keyboard_extension
 
+(define-module (deepness))
+
 (use-modules
   (gnu) (gnu bootloader u-boot) (gnu system nss)
   (guix channels) (guix inferior) (guix modules)

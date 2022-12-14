@@ -1,2 +1,16 @@
 # Can this be replaced by a static server hosted on gitlab.io ?
 sudo guix publish --user=fare
+
+https://othacehe.org/distributing-guix-system-pinebook-pro-images.html
+http://www.joyofsource.com/guix-system-on-the-pinebook-pro.html
+https://www.mail-archive.com/help-guix@gnu.org/msg11813.html
+https://codeberg.org/HazardChem/PinePhone_Keyboard/src/branch/main/xkb
+https://forum.pine64.org/showthread.php?tid=16640
+https://wiki.archlinux.org/title/Xbindkeys
+https://wiki.archlinux.org/title/X_keyboard_extension
+https://wiki.archlinux.org/title/xmodmap
+https://github.com/Schroedinger50PCT/guix-pinephone/blob/main/pinephone_config.scm
+https://nixos.wiki/wiki/PinePhone
+https://unix.stackexchange.com/questions/249122/why-do-my-xmodmap-binds-involving-altgr-only-work-on-some-keys
+https://xnux.eu/log/#044
+https://wiki.systemcrafters.cc/guix/nonguix-installation-guide
