@@ -18,7 +18,8 @@
 (export my-pc foo)
 
 (define my-terminal-font
-  (file-append font-terminus "/share/consolefonts/ter-v32i.psf.gz"))
+  ;; i32b for IBM PC font (cp437), 132b for Latin1 font
+  (file-append font-terminus "/share/consolefonts/ter-i32b.psf.gz"))
 (define my-console-font-config
   (map (lambda (i) (cons (format #f "tty~d" i) my-terminal-font)) (iota 6 1)))
 
