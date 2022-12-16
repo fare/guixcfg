@@ -7,7 +7,7 @@ ini
 '
 
 disk=sda
-host=yew2
+host=mew
 part=${disk}
 #part=${disk}p
 bootpart=${part}1
@@ -36,7 +36,6 @@ inimnt2 () {
   mkdir -p /mnt/sys /mnt/proc /mnt/dev /mnt/run /mnt/tmp /mnt/gnu /mnt/var/guix /mnt/gnu/store /mnt/root
   mkdir -p /gnu /var/guix
 
-  mount --rbind /sys /mnt/sys
   mount --rbind /sys /mnt/sys
   mount --rbind /proc /mnt/proc
   mount --rbind /dev /mnt/dev

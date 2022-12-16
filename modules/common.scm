@@ -151,8 +151,7 @@
             #;BUILD "gcc-toolchain" "linux-libre-headers" "make" "racket" "sbcl"
             #;NETUTILS "iftop" "mtr" "nss-certs" "openssh" "rsync" "sshfs" "oath-toolkit"
             #;NETAPPS "curl" "hexchat" "wget"
-            #;BROWSE "emacs-edit-server"
-                     #;"firefox" ;; temporarily disable not to have to build rust 1.61.0
+            #;BROWSE "emacs-edit-server" "firefox"
                      "ublock-origin-chromium"
                      "ungoogled-chromium" "w3m" "icecat" ;; "lynx"
             #;COMMS "hexchat" "signal-desktop" #;"telegram-cli" "telegram-desktop"
@@ -186,7 +185,8 @@
           #;(drivers '("nvidia")))) ;; NVIDIA
       ;;#;(service kernel-module-loader-service-type '("nvidia_uvm")) ;; NVIDIA
       #;(simple-service 'custom-udev-rules udev-service-type (list nvidia-driver)) ;; NVIDIA
-      (screen-locker-service xlockmore "xlock") ;; Use xscreensaver instead?
+      (screen-locker-service xlockmore "xlock")
+      ;;(screen-locker-service xscreensaver "xscreensaver") ;; Use xscreensaver instead?
       (bluetooth-service #:auto-enable? #t)
       (service gpm-service-type)
       #;(service nix-service-type

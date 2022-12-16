@@ -1,4 +1,3 @@
-;; (non)guix configuration for Yew2, aka Mew
 ;; # dmidecode -s system-version ==> ThinkPad X1 Yoga 2nd
 ;; Backup installation of Yew on a SD Card
 
@@ -8,7 +7,6 @@
   (common) (gnu system file-systems))
 
 (my-pc "mew"
-  #:crypted-part-name "yew2"
   #:crypted-part-uuid "9baf17ae-4031-44d6-a384-efd38895ee9d"
   #:crypted-lvms '("swap" "nixos" "guix")
   #:file-systems

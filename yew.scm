@@ -11,6 +11,13 @@
   #:crypted-lvms '("swap" "nixos" "home" "guix")
   #:file-systems
   (lambda (mapped-devices)
+    (define nixos
+      (file-system
+       (device (uuid "ab3d691b-227a-4a05-a084-6928abbf0959"))
+       (mount-point "/nixos")
+       (type "ext4")
+       (flags '(lazy-time))
+       (dependencies mapped-devices)))
     (list (file-system
            ;;(device "/dev/mapper/yew-guix")
            (device (uuid "43f7ca3e-c107-4f15-9756-5d3cbacad0a0"))
@@ -32,12 +39,7 @@
            (type "ext4")
            (flags '(lazy-time))
            (dependencies mapped-devices))
-          (file-system
-           (device (uuid "ab3d691b-227a-4a05-a084-6928abbf0959"))
-           (mount-point "/nixos")
-           (type "ext4")
-           (flags '(lazy-time))
-           (dependencies mapped-devices))
+          nixos
           (file-system
            ;;(uuid "C1D9-0574")
            (device "/dev/nvme0n1p1")
