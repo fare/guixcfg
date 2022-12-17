@@ -9,6 +9,7 @@
 (my-pc "yew"
   #:crypted-part-uuid "6761c21c-1188-4955-9109-3efb088efc05"
   #:crypted-lvms '("swap" "nixos" "home" "guix")
+  ;;#:boot-target "/boot/guix"
   #:file-systems
   (lambda (mapped-devices)
     (define nixos

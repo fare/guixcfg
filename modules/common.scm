@@ -9,7 +9,7 @@
   (srfi srfi-1))
 
 (use-service-modules
-  authentication cups dbus desktop dict nix security-token sound ssh xorg);; virtualization docker
+  authentication cups dbus desktop dict nix security-token sound ssh xorg) ;; virtualization docker
 
 (use-package-modules
   admin bootloaders certs cups fonts fontutils games ghostscript gnome linux lisp
@@ -70,7 +70,8 @@
           (initrd-modules '())
           (firmware (list linux-firmware iwlwifi-firmware broadcom-bt-firmware sof-firmware))
           (issue (string-append "Welcome to " host-name "\n"))
-          (dpi 75))
+          (dpi 75)
+          (boot-target "/boot"))
 
   (define mapped-devices
     (my-mapped-devices crypted-part-name crypted-part-uuid crypted-lvms))
@@ -91,7 +92,7 @@
           (bootloader
            (inherit grub-efi-removable-bootloader)
            #;(installer #~(const #true)))) ;; "/dev/nvme0n1" "(hd0)"
-        (targets '("/boot"))))
+        (targets (list boot-target))))
 
     (mapped-devices mapped-devices)
 
@@ -151,7 +152,8 @@
             #;BUILD "gcc-toolchain" "linux-libre-headers" "make" "racket" "sbcl"
             #;NETUTILS "iftop" "mtr" "nss-certs" "openssh" "rsync" "sshfs" "oath-toolkit"
             #;NETAPPS "curl" "hexchat" "wget"
-            #;BROWSE "emacs-edit-server" "firefox"
+            #;BROWSE "emacs-edit-server"
+                     ;; "firefox" ;; slow to build, and depends on rust, etc.
                      "ublock-origin-chromium"
                      "ungoogled-chromium" "w3m" "icecat" ;; "lynx"
             #;COMMS "hexchat" "signal-desktop" #;"telegram-cli" "telegram-desktop"
@@ -164,7 +166,7 @@
             #;MARKUP "markdown" "python-docutils" "texlive" ;; "guile-commonmark"
             #;DOCUMENTS "evince" "libreoffice" "xournal"
             #;FONT-UTILS "fontconfig" "gnome-font-viewer" "xfontsel" "xlsfonts" ;; "fontmanager"
-            #;XUTILS "xdpyinfo" "xmodmap" "xrandr" "xrdb" "xset" "xsetroot" "xwininfo"
+            #;XUTILS "arandr" "xdpyinfo" "xmodmap" "xrandr" "xrdb" "xset" "xsetroot" "xwininfo"
             #;XPROGS "synergy" "stumpwm" "terminator" "xterm" "xscreensaver")) ;; "ratpoison"
      my-fonts
      %base-packages))
@@ -252,5 +254,3 @@
   ;; Allow resolution of '.local' host names with mDNS.
   #;(name-service-switch %mdns-host-lookup-nss)
   ))
-
-(define (foo) (display "Foo Bar!\n"))

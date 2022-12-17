@@ -12,7 +12,7 @@
 ;; But somehow the guix kernel tries to load the kvm module, fails, and stops with an error
 
 (import
-  :std/misc/list :std/misc/ports :std/misc/process :std/misc/string
+  :std/assert :std/misc/list :std/misc/ports :std/misc/process :std/misc/string
   :std/pregexp :std/srfi/1 :std/srfi/13 :std/sugar)
 
 ;; From clan/base
@@ -80,7 +80,7 @@
 
 (def boot-uuid (partition-id (first boot-mount)))
 
-(def guix-grub-cfg (read-file-lines "/guix/boot/grub/grub.cfg"))
+(def guix-grub-cfg (read-file-lines "/boot/grub/grub.cfg.guix"))
 
 (def dirs '())
 
