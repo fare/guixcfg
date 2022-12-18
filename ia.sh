@@ -98,3 +98,51 @@ fix () {
   cp /mnt/boot/grub/grub.cfg /mnt/boot/grub/grub.cfg.bak
   sed 's,^cryptomount,#cryptomount,' < /mnt/boot/grub/grub.cfg.bak > /mnt/boot/grub/grub.cfg
 }
+
+##
+yew_hacks () {
+  mount --rbind /sys /guix/sys
+  mount --rbind /proc /guix/proc
+  mount --rbind /dev /guix/dev
+  mount --rbind /run /guix/run
+  #mount -t tmpfs tmpfs /guix/tmp
+  mount --bind /home /guix/home
+
+  mount --bind /boot /guix/boot
+  #mount /dev/nvme0n1p2 /guix/boot
+
+  #mount --bind /guix/gnu /gnu
+  #mount --bind /guix/var/guix /var/guix
+
+  guix-daemon --build-users-group=guixbuild &
+
+  mount -o remount,size=20G tmpsfs /tmp
+
+  export HOME=/home/fare ZDOTDIR=/home/fare PSX="Guix " PATH=/home/fare/bin:/home/fare/bin/nix:/home/fare/etc/bin:/home/fare/.nix-profile/bin:/home/fare/.nix-profile/sbin:/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/nix/var/nix/profiles/default/sbin:/run/current-system/sw/bin:/run/current-system/sw/sbin:/nix/var/nix/profiles/system/sw/bin:/nix/var/nix/profiles/system/sw/sbin:/home/fare/.config/guix/current/bin:/var/guix/profiles/system/profile/bin:/var/guix/profiles/system/profile/sbin
+
+  chroot /guix /var/guix/profiles/system/profile/bin/zsh
+  guix system reconfigure --load-path=/home/fare/src/fare/guixcfg/modules /home/fare/src/fare/guixcfg/yew.scm
+  cp /boot/grub/grub.cfg /boot/grub/grub.cfg.guix
+}
+
+mew_hacks () {
+  cryptsetup luksOpen /dev/sda2 mew.crypt
+  vgchange -ay
+  mount /dev/mew/guix /mnt
+  mount /dev/mew/nixos /mnt/nixos
+  mount /dev/sda1 /mnt/boot
+  mount --rbind /sys /mnt/sys
+  mount --rbind /proc /mnt/proc
+  mount --rbind /dev /mnt/dev
+  mount --rbind /run /mnt/run
+  mount -t tmpfs tmpfs /mnt/tmp
+  mount --bind /mnt/gnu /gnu
+  mount --bind /mnt/var/guix /var/guix
+  mount --bind /mnt/boot /boot
+  guix-daemon --build-users-group=guixbuild &
+
+  export HOME=/home/fare ZDOTDIR=/home/fare PSX="Mew " PATH=/home/fare/bin:/home/fare/bin/nix:/home/fare/etc/bin:/home/fare/.nix-profile/bin:/home/fare/.nix-profile/sbin:/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/nix/var/nix/profiles/default/sbin:/run/current-system/sw/bin:/run/current-system/sw/sbin:/nix/var/nix/profiles/system/sw/bin:/nix/var/nix/profiles/system/sw/sbin:/home/fare/.config/guix/current/bin:/var/guix/profiles/system/profile/bin:/var/guix/profiles/system/profile/sbin
+
+  chroot /mnt /var/guix/profiles/system/profile/bin/zsh
+  guix system reconfigure --load-path=/home/fare/src/fare/guixcfg/modules /home/fare/src/fare/guixcfg/mew.scm
+}
