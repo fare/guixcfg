@@ -13,13 +13,13 @@
   (lambda (mapped-devices)
     (list
      (file-system
-      (device "/dev/yew2/guix")
+      (device "/dev/mew/guix")
       (mount-point "/")
       (type "ext4")
       (flags '(lazy-time))
       (dependencies mapped-devices))
      (file-system
-      (device "/dev/yew2/nixos")
+      (device "/dev/mew/nixos")
       (mount-point "/nixos")
       (type "ext4")
       (flags '(lazy-time))
