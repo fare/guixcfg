@@ -165,3 +165,8 @@ mew_hacks () {
   for i in /boot /mnt/boot /mnt/tmp /mnt/run/user/1000/gvfs /mnt/run/user/1000 /mnt/run/wrappers /mnt/run/keys /mnt/run /mnt/dev/mqueue /mnt/dev/hugepages /mnt/dev/shm /mnt/dev/pts /mnt/dev /mnt/proc /mnt/sys/fs/pstore /mnt/sys/kernel/config /mnt/sys/fs/fuse/connections /mnt/sys/kernel/debug /mnt/sys/fs/bpf /mnt/sys/firmware/efi/efivars /mnt/sys/fs/cgroup /mnt/sys/kernel/security /mnt/sys /gnu /guix/var/guix /mnt/nixos /mnt ; do umount $i ; done
 
 }
+
+luna_hacks () {
+    cryptsetup luksOpen /dev/nvme0n1p2 luna ; vgchange -ay
+    mkdir -p /luna ; mount /dev/luna/alt /luna ; mount /dev/luna/root /luna/guix ; mount /dev/nvme0n1p1 /luna/boot
+}
