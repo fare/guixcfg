@@ -150,7 +150,7 @@
             #;SOUND "alsa-utils" "audacity" "aumix" "pamixer" "pavucontrol" "pulseaudio" ;;"pulsemixer" "volctl"
             #;SYSTEM "lsof" "strace"
             #;BUILD "gcc-toolchain" "linux-libre-headers" "make" "racket" "sbcl"
-            #;NETUTILS "iftop" "mtr" "nss-certs" "openssh" "rsync" "sshfs" "oath-toolkit"
+            #;NETUTILS "iftop" "mtr" "nss-certs" "openssh" "rsync" "sshfs" "oath-toolkit" "gnupg"
             #;NETAPPS "curl" "hexchat" "wget"
             #;BROWSE "emacs-edit-server"
                      ;; "firefox" ;; slow to build, and depends on rust, etc.
