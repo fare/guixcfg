@@ -12,6 +12,7 @@
   (lambda (mapped-devices)
     (define nixos
       (file-system
+       ;;(device "/dev/yew/nixos")
        (device (uuid "ab3d691b-227a-4a05-a084-6928abbf0959"))
        (mount-point "/nixos")
        (type "ext4")

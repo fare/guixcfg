@@ -126,10 +126,11 @@ yew_hacks () {
 
   guix-daemon --build-users-group=guixbuild --disable-chroot &
 
-  guix system reconfigure --load-path=/home/fare/src/fare/guixcfg/modules /home/fare/src/fare/guixcfg/yew.scm
-
-  guix system reconfigure --load-path=/home/fare/src/fare/guixcfg/modules /home/fare/src/fare/guixcfg/mew.scm
+  guix system reconfigure --load-path=/home/fare/src/fare/guixcfg/modules \
+       /home/fare/src/fare/guixcfg/yew.scm &&
   cp /boot/grub/grub.cfg /boot/grub/grub.cfg.guix
+  . ~/etc/zsh/cmd.o_guix
+  fixboot
 }
 
 mew_hacks () {
