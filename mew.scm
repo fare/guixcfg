@@ -1,5 +1,6 @@
 ;; # dmidecode -s system-version ==> ThinkPad X1 Yoga 2nd
 ;; Backup installation of Yew on a SD Card
+;; guix pull --commit=989a3916dc8967bcb7275f10452f89bc6c3389cc # Pin to version 1.4.0
 
 (define-module (mew))
 

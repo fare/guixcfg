@@ -170,7 +170,6 @@
             #;XPROGS "synergy" "stumpwm" "terminator" "xterm" "xscreensaver")) ;; "ratpoison"
      my-fonts
      %base-packages))
-
   (services
     (cons*
       (set-xorg-configuration
@@ -186,7 +185,7 @@
           #;(modules (cons* nvidia-driver %default-xorg-modules)) ;; NVIDIA
           #;(drivers '("nvidia")))) ;; NVIDIA
       ;;#;(service kernel-module-loader-service-type '("nvidia_uvm")) ;; NVIDIA
-      #;(simple-service 'custom-udev-rules udev-service-type (list nvidia-driver)) ;; NVIDIA
+      ;;(simple-service 'custom-udev-rules udev-service-type (list nvidia-driver)) ;; NVIDIA
       (screen-locker-service xlockmore "xlock")
       ;;(screen-locker-service xscreensaver "xscreensaver") ;; Use xscreensaver instead?
       (bluetooth-service #:auto-enable? #t)
@@ -211,7 +210,7 @@
               ("root" ,(local-file "/home/fare/.ssh/id_rsa.pub"))))))
       #;(service fprintd-service-type)
       (service pcscd-service-type)
-      (pam-limits-service
+      #;(pam-limits-service
         (list
           (pam-limits-entry "@audio" 'both 'rtprio 99)
           (pam-limits-entry "@audio" 'both 'memlock 'unlimited)))

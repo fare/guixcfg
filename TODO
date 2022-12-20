@@ -1,3 +1,23 @@
+Determine why guix 1.4.0 segfaults so much:
+I tried to install Guix under NixOS so they can share the same encrypted lvm hard-disk.
+This required a lot of editing guix-install.sh to disable tests and replace mv by rsync
+to fix broken steps. But in the end, guix segfaults while loading srfi/srfi-9 from guile
+(after loading it, before it recursively loads system/base/ck, says strace, comparing to
+what happens on another machine where things work). All the guile libraries are from
+guile 3.0.8, but I notice the guix 1.4.0 binary tarball also contains guile 3.0.7.
+Maybe the segfault is due to guix having somehow been compiled with 3.0.7 but being run
+against 3.0.8 which happens to be slightly incompatible?
+
+While tweaking things, I got as far as the build to instead segfault while building
+shepherd-guix-daemon, though I'm not sure how to invoke things to determine where the
+segfault happens.
+
+My friend Attila tells me that guix gc might also have corrupted my installation with
+respect to extension channels I use in addition to guix strictly speaking. Could that
+be the case? Is it a known bug? Are there known fixes or workarounds?
+
+
+
 # Can this be replaced by a static server hosted on gitlab.io ?
 sudo guix publish --user=fare
 
