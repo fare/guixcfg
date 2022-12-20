@@ -1,5 +1,3 @@
-;; Jackhill: https://paste.debian.net/1206838/
-;; guix describe --format=channels > channels-specs.scm
 
 (define-module (yew))
 

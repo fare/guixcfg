@@ -1,5 +1,4 @@
 ;; (non)guix configuration for Luna, a PINE64 PinePhone Pro
-
 ;; Built at this commit: guix pull --commit=eb5e650
 
 
