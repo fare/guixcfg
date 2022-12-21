@@ -1,12 +1,14 @@
 ;; (non)guix configuration for Luna, a PINE64 PinePhone Pro
-;; Built at this commit: guix pull --commit=eb5e650
+;; https://wiki.pine64.org/wiki/PinePhone_Pro_Software_Releases#Mobian
 
+;; Trying to build it at the version-1.4.0 commit: 989a3916dc8967bcb7275f10452f89bc6c3389cc
 
 ;; References
 ;;
 ;; PinePhone in general:
-;; For tow-boot, see https://wiki.mobian-project.org/doku.php?id=install-linux
+;; https://www.pine64.org/pinephonepro/
 ;; https://wiki.pine64.org/wiki/PinePhone_Pro_Software_Releases#Mobian
+;; [Using tow-boot] https://wiki.mobian-project.org/doku.php?id=install-linux
 ;;
 ;; Guix & Nonguix in general and for the PinePhone:
 ;; https://guix.gnu.org/manual/en/guix.html
@@ -18,6 +20,11 @@
 ;; https://codeberg.org/HazardChem/PinePhone_Keyboard/src/branch/main/tty
 ;; http://blog.azundris.com/archives/193-X-treme-pain-XKB-vs-XModMap.html
 ;; https://wiki.archlinux.org/title/X_keyboard_extension
+;;
+;; CPU cores: 4x A53, 2x A72, at up to 1.5GHz (see lscpu).
+;; device 160.8 x 76.6 x 11.1mm
+;; Screen: 1440x720 resolution, 136 x 68 mm actual size, about 269 dpi
+
 
 (define-module (deepness))
 
@@ -28,7 +35,7 @@
   (srfi srfi-1))
 
 (use-service-modules
-  authentication dbus desktop dict nix security-token sound ssh xorg);; virtualization docker
+  authentication cups dbus desktop dict nix security-token sound ssh xorg);; virtualization docker
 
 (use-package-modules
   admin bootloaders certs cups fonts fontutils games ghostscript gnome linux lisp
@@ -57,7 +64,7 @@
   ;; This goofy code will generate the grub.cfg without installing the grub bootloader on disk.
   (bootloader (bootloader-configuration
                 (bootloader u-boot-pine64-lts-bootloader)
-                (targets '("/dev/mmcblk2"))))
+                (targets '("/dev/mmcblk1p1")))) ;; slot
 
   (mapped-devices
     (list
@@ -71,27 +78,26 @@
         (type lvm-device-mapping))))
 
   (file-systems
-    (append
-     (let* ((root (file-system
-                   (device "/dev/mapper/deepness-pinephone")
-                   (mount-point "/")
-                   (type "brtfs")
-                   (flags '(lazy-time))
-                   (dependencies mapped-devices)))
-            (data (file-system
-                   (device "/dev/mapper/deepness-data")
-                   (mount-point "/data")
-                   (type "brtfs")
-                   (flags '(lazy-time))
-                   (options "compress=zstd")
-                   (dependencies mapped-devices)))
-            (boot (file-system
-                   ;;(uuid "FBD5-92B7")
-                   (device "/dev/mmcblk1p1")
-                   (mount-point "/boot")
-                   (flags '(lazy-time))
-                   (type "vfat"))))
-       (cons* root boot %base-file-systems))))
+   (let* ((root (file-system
+                 (device "/dev/deepness/pinephone")
+                 (mount-point "/")
+                 (type "ext4")
+                 (flags '(lazy-time))
+                 (dependencies mapped-devices)))
+          (data (file-system
+                 (device "/dev/deepness/root")
+                 (mount-point "/data")
+                 (type "ext4")
+                 (flags '(lazy-time))
+                 (dependencies mapped-devices)))
+          (boot (file-system
+                 (device (uuid "FBD5-92B7" 'fat))
+                 ;;(device "/dev/mmcblk1p1")
+                 (mount-point "/boot")
+                 (flags '(lazy-time))
+                 (type "vfat")
+		 #;(dependencies (list root)))))
+     (cons* root data boot %base-file-systems)))
 
   (swap-devices
    (list
@@ -103,12 +109,11 @@
   (kernel linux-libre-arm64-generic)
   (kernel-arguments
    '("iommu=soft"
-     "nvme_core.default_ps_max_latency_us=0" ;; needed to fix broken i660p m2 nvme disk on PinePhone
-     "zswap.enabled=1" "zswap.compressor=zstd"
-     "zswap.max_pool_percent=50" "zswap.zpool=z3fold"))
+     "nvme_core.default_ps_max_latency_us=0")) ;; needed to fix broken i660p m2 nvme disk on PinePhone
+  ;; "zswap.enabled=1" "zswap.compressor=zstd" "zswap.max_pool_percent=50" "zswap.zpool=z3fold"
   (initrd-modules
     (cons*
-      "zstd" "z3fold"
+      ;;"zstd" "z3fold"
       ;;"snd-pcm-oss" "snd-mixer-oss" ;; somehow don't get autoloaded but mplayer wants it by default
       %base-initrd-modules))
 
@@ -140,11 +145,10 @@
   (packages
     (append
      (map specification->package
-          '(#;SURVIVE #;"emacs" "git" "rlwrap" "screen" "zsh"
-            #;STORAGE "btrfs-progs" "cryptsetup" "e2fsprogs" "lvm2"
+          '(#;SURVIVE "emacs" "git" "rlwrap" "screen" "zsh"
+            #;STORAGE #;"btrfs-progs" "cryptsetup" "e2fsprogs" "lvm2"
             #;SYSTEM "lsof" ;;"fbterm"
-            #;NETUTILS "iftop" "mtr" "nss-certs" "openssh" "rsync" "sshfs"))
-     #|
+            #;NETUTILS "iftop" "mtr" "nss-certs" "openssh" "rsync" "sshfs" "gnupg"
             #;HARDWARE "bluez" "bluez-alsa" "cups" "inxi" ;; "light" "brightnessctl"
             #;SOUND "alsa-utils" "audacity" "aumix" "pamixer" "pavucontrol" "pulseaudio" ;;"pulsemixer" "volctl"
             #;NETAPPS "curl" "hexchat" "wget"
@@ -162,13 +166,12 @@
             #;DOCUMENTS "evince" ;; "libreoffice" "xournal"
             #;FONT-UTILS "xfontsel" "xlsfonts" ;; "gnome-font-viewer" "fontconfig" "fontmanager"
             #;XUTILS "xdpyinfo" "xmodmap" "xrandr" "xrdb" "xset" "xsetroot" "xwininfo"
-            #;XPROGS "synergy" "stumpwm" "terminator" "xterm" "xscreensaver" ;; "ratpoison"
-     |#
+            #;XPROGS "synergy" "stumpwm" "terminator" "xterm" "xscreensaver")) ;; "ratpoison"
      %base-packages))
 
   (services
     (cons*
-     #;(set-xorg-configuration
+     (set-xorg-configuration
         (xorg-configuration
           #;(server-arguments '()) ;; disable the default '("-nolisten" "tcp") ;--- don't do it until we have a good firewall!
           (keyboard-layout keyboard-layout)
@@ -181,7 +184,7 @@
            '("substituters = https://cache.nixos.org https://cache.nixos.org/ https://hydra.iohk.io https://iohk.cachix.org https://mukn.cachix.org\n"
              "trusted-substituters = https://cache.nixos.org https://cache.nixos.org/ https://hydra.iohk.io https://iohk.cachix.org https://mukn.cachix.org\n"
       "trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo= hydra.goguen-ala-cardano.dev-mantis.iohkdev.io-1:wh2Nepc/RGAY2UMvY5ugsT8JOz84BKLIpFbn7beZ/mo= mukn.cachix.org-1:ujoZLZMpGNQMeZbLBxmOcO7aj+7E5XSnZxwFpuhhsqs=\n"))))
-      #;(dicod-service #:config
+      (dicod-service #:config
        (dicod-configuration
         (databases (list ;; TODO: package and add other databases?
                     %dicod-database:gcide))))
@@ -194,7 +197,7 @@
             `(("fare" ,(local-file "/home/fare/.ssh/id_rsa.pub"))
               ("root" ,(local-file "/home/fare/.ssh/id_rsa.pub"))))))
       #;(service fprintd-service-type)
-      #;(service pcscd-service-type)
+      (service pcscd-service-type)
       #;(pam-limits-service
         (list
           (pam-limits-entry "@audio" 'both 'rtprio 99)
@@ -203,18 +206,18 @@
       #;(service virtlog-service-type (virtlog-configuration (max-clients 1000)))
       #;(service singularity-service-type)
       #;(service docker-service-type)
-      #;(service cups-service-type
+      (service cups-service-type
         (cups-configuration
           (web-interface? #t)
           (extensions
            (list brlaser cups-filters epson-inkjet-printer-escpr foomatic-filters
                  hplip-minimal splix)))) ;; gutenprint
-      (modify-services %base-services ;; %desktop-services
+      (modify-services %desktop-services ;; %base-services
         (delete gdm-service-type) (delete gdm-file-system-service)
         (console-font-service-type _config =>
           (map (lambda (i)
                  (cons (format #f "tty~d" i)
-                       (file-append font-terminus "/share/consolefonts/ter-v24i.psf.gz")))
+                       (file-append font-terminus "/share/consolefonts/ter-i24b.psf.gz")))
                (iota 6 1)))
         (guix-service-type config =>
           (guix-configuration
@@ -224,8 +227,8 @@
                               "https://substitutes.nonguix.org"
                               "https://bordeaux.guix.gnu.org"
                               %default-substitute-urls))
-            (authorized-keys (cons* (local-file "./nonguix-key.pub")
-                                    (local-file "./bordeaux-key.pub")
+            (authorized-keys (cons* (local-file "./modules/nonguix-key.pub")
+                                    (local-file "./modules/bordeaux-key.pub")
                                     %default-authorized-guix-keys))))
         (pulseaudio-service-type config =>
           (pulseaudio-configuration
