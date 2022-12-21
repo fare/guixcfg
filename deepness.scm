@@ -1,5 +1,6 @@
 ;; (non)guix configuration for Luna, a PINE64 PinePhone Pro
-;; https://wiki.pine64.org/wiki/PinePhone_Pro_Software_Releases#Mobian
+;;
+;; Built at this commit: guix pull --commit=eb5e650
 
 ;; Trying to build it at the version-1.4.0 commit: 989a3916dc8967bcb7275f10452f89bc6c3389cc
 
@@ -12,6 +13,7 @@
 ;;
 ;; Guix & Nonguix in general and for the PinePhone:
 ;; https://guix.gnu.org/manual/en/guix.html
+;; https://ci.guix.gnu.org/search/latest/image?query=spec:images+status:success+system:x86_64-linux+pinebook-pro-barebones-raw-image
 ;; https://wiki.systemcrafters.cc/guix/nonguix-installation-guide
 ;; https://github.com/Schroedinger50PCT/guix-pinephone/blob/main/pinephone_config.scm
 ;;
@@ -159,7 +161,7 @@
             ;; TODO: add to nonguix fortune-mod and other related packages that were removed from guix for offending the politically correct humorlessness of some maintainers? https://debbugs.gnu.org/cgi/bugreport.cgi?bug=54691 guix commits: f592decd4d823a973600d4cdd9f3f7d3ea610429 5e174805742b2bec9f5a06c9dd208c60b9af5c14 6b6b947b6133c40f86800dc0d36a59e16ac169fc
             #;TEXTDATA "dico" "daikichi" "fortunes-jkirchartz"
             #;TEXTUTILS "diffutils" "gawk" "sed" "m4" "perl" "patch" "recode" "wdiff"
-            #;LANGUAGES ;; "make" "racket" "sbcl"
+            #;LANGUAGES "make" "racket" "sbcl"
             #;VIDEO "vlc" ;; "mplayer"
             #;GRAPHICS "imagemagick" "feh" ;; "fbida" "gimp" "inkscape" "qiv"
             #;MARKUP "markdown" "python-docutils" ;; "texlive" ;; "guile-commonmark"

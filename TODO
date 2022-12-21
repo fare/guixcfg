@@ -16,6 +16,9 @@ My friend Attila tells me that guix gc might also have corrupted my installation
 respect to extension channels I use in addition to guix strictly speaking. Could that
 be the case? Is it a known bug? Are there known fixes or workarounds?
 
+https://gitlab.com/nonguix/nonguix/-/issues/111
+https://issues.guix.gnu.org/57838
+
 
 
 # Can this be replaced by a static server hosted on gitlab.io ?
@@ -33,4 +36,6 @@ https://github.com/Schroedinger50PCT/guix-pinephone/blob/main/pinephone_config.s
 https://nixos.wiki/wiki/PinePhone
 https://unix.stackexchange.com/questions/249122/why-do-my-xmodmap-binds-involving-altgr-only-work-on-some-keys
 https://xnux.eu/log/#044
-https://wiki.systemcrafters.cc/guix/nonguix-installation-guide
+https://wiki.systemcrafters.net/guix/nonguix-installation-guide/
+
+https://dthompson.us/installing-guix-on-a-10th-gen-thinkpad-x1.html

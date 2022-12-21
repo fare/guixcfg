@@ -243,7 +243,7 @@
             (substitute-urls (cons* ;;"http://guix.drewc.ca:8080/"
                                     "https://substitutes.nonguix.org"
                                     "https://bordeaux.guix.gnu.org"
-                                    %default-substitute-urls))
+                                    %default-substitute-urls)) ;; "https://ci.guix.gnu.org"
             (authorized-keys (cons* (local-file "./nonguix-key.pub")
                                     (local-file "./bordeaux-key.pub")
                                     %default-authorized-guix-keys))))
