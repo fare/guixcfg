@@ -1,6 +1,8 @@
 ;; (non)guix configuration for Luna, a PINE64 PinePhone Pro
 ;;
-;; Built at this commit: guix pull --commit=eb5e650
+;; Built at this commit: guix pull --commit=v1.4.0 ;; 8e2f32cee982d42a79e53fc1e9aa7b8ff0514714
+;; NOT Built at this commit: guix pull --commit=eb5e650
+
 
 ;; Trying to build it at the version-1.4.0 commit: 989a3916dc8967bcb7275f10452f89bc6c3389cc
 
