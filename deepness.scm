@@ -1,4 +1,6 @@
 ;; (non)guix configuration for Luna, a PINE64 PinePhone Pro
+;; NB: This is a work in progress, as I am yet to get this to work in any shape or form.
+;; What does work is that I can install guix programs on top of mobian.
 ;;
 ;; I tried in vain to build at this commit: guix pull --commit=v1.4.0
 ;; aka 8e2f32cee982d42a79e53fc1e9aa7b8ff0514714 for which I was hoping
@@ -8,24 +10,31 @@
 ;; guix build --without-tests=tracker works, but there is no such flag for guix system build.
 ;;
 ;; My current fallback is mobian (phosh) with guix as mere userland package manager.
-;; I intend to try sxmo instead of phosh at some point, and maybe use pmOS for that.
+;; I tried sxmo (on Mobian) but it started unlocked(!). Maybe try pmOS at some point?
 ;;
 ;; TODO: try https://git.sr.ht/~oriansj/System_setup/tree/main/item/files/guix-config.scm
 ;; as a template so I can have a working system without gtk? Or fork guix to disable tracker tests?
 ;; or hack tracker to fix the tests?
-
+;;
+;; <nckx> I guess that would be --without-tests=tracker from the CLI, assuming that applies to your situation.  Otherwise, (define tracker/untested (package (inherit tracker) (arguments (substitute-keyword-arguments (package-arguments tracker) ((#:tests? _tests?) #f))))) in code.
+;;
 ;; References
+;;
+;; Guix for the PinePhone Pro and other similar systems:
+;; https://git.sr.ht/~abcdw/guix-pinephonepro
+;; https://mastodon.social/@abcdw@fosstodon.org/110079134211351988
+;; https://ci.guix.gnu.org/search/latest/image?query=spec:images+status:success+system:x86_64-linux+pinebook-pro-barebones-raw-image
+;; https://github.com/Schroedinger50PCT/guix-pinephone/blob/main/pinephone_config.scm
 ;;
 ;; PinePhone in general:
 ;; https://www.pine64.org/pinephonepro/
 ;; https://wiki.pine64.org/wiki/PinePhone_Pro_Software_Releases#Mobian
 ;; [Using tow-boot] https://wiki.mobian-project.org/doku.php?id=install-linux
+;; https://tuxphones.com/pinephone-pro-sony-imx258-camera-demo-samples-mainline-linux/
 ;;
 ;; Guix & Nonguix in general and for the PinePhone:
 ;; https://guix.gnu.org/manual/en/guix.html
-;; https://ci.guix.gnu.org/search/latest/image?query=spec:images+status:success+system:x86_64-linux+pinebook-pro-barebones-raw-image
 ;; https://wiki.systemcrafters.cc/guix/nonguix-installation-guide
-;; https://github.com/Schroedinger50PCT/guix-pinephone/blob/main/pinephone_config.scm
 ;;
 ;; Keyboard issue:
 ;; https://codeberg.org/HazardChem/PinePhone_Keyboard/src/branch/main/xkb
