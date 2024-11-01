@@ -50,13 +50,16 @@
 (define-module (deepness))
 
 (use-modules
+  (config) ;; from https://git.sr.ht/~abcdw/guix-pinephonepro subdirectory src/
   (gnu) (gnu bootloader u-boot) (gnu system nss)
   (guix channels) (guix inferior) (guix modules) (guix packages) (guix utils)
   ;;(nongnu packages fonts) (nongnu packages linux) (nongnu system linux-initrd)
+  (rde system services networking)
   (srfi srfi-1))
 
 (use-service-modules
-  authentication cups dbus desktop dict nix security-token sddm sound ssh xorg);; virtualization docker
+  authentication cups dbus desktop dict networking nix
+  security-token sddm sound ssh xorg);; virtualization docker
 
 (use-package-modules
   admin bootloaders certs cups fonts fontutils games ghostscript gnome linux lisp
@@ -75,26 +78,20 @@
 (define tracker/orig tracker)
 
 (define-public tracker/untested
-  (package (inherit tracker/orig)
-	   (arguments (substitute-keyword-arguments (package-arguments tracker/orig)
-						    ((#:tests? tests?) #f)))))
+  (package
+    (inherit tracker/orig)
+    (arguments (substitute-keyword-arguments
+                (package-arguments tracker/orig)
+                ((#:tests? tests?) #f)))))
+
 (define make-tracker-untested
   (package-input-rewriting `((,tracker ,tracker/untested)) #:deep? #t))
 
 (operating-system
+  (inherit pinephone-pro-os)
   (host-name "deepness")
   (timezone "America/New_York")
   (locale "en_US.UTF-8")
-
-  ;; BEWARE: Guix does not support a separate /boot partition yet http://issues.guix.gnu.org/48172
-  ;;; (bootloader (bootloader-configuration (bootloader grub-bootloader) (target "/dev/nvme0n1")))
-  ;; So instead, we'll generate a grub configuration and we'll integrate it into the grub from NixOS
-  ;; with the guix-boot.ss script (written in Gerbil Scheme).
-  ;; From http://guix.gnu.org/en/cookbook/en/html_node/Running-Guix-on-a-Linode-Server.html --
-  ;; This goofy code will generate the grub.cfg without installing the grub bootloader on disk.
-  (bootloader (bootloader-configuration
-                (bootloader u-boot-pine64-lts-bootloader)
-                (targets '("/dev/mmcblk1p1")))) ;; slot
 
   (mapped-devices
     (list
@@ -126,7 +123,7 @@
                  (mount-point "/boot")
                  (flags '(lazy-time))
                  (type "vfat")
-		 #;(dependencies (list root)))))
+                 #;(dependencies (list root)))))
      (cons* root data boot %base-file-systems)))
 
   (swap-devices
@@ -135,22 +132,6 @@
      (target "/dev/deepness/swap")
      (discard? #t)
      (dependencies mapped-devices))))
-
-  ;;(kernel linux-libre-arm64-generic)
-  (kernel linux-libre)
-  (kernel-arguments
-   '("iommu=soft"
-     "nvme_core.default_ps_max_latency_us=0")) ;; needed to fix broken i660p m2 nvme disk on PinePhone
-  ;; "zswap.enabled=1" "zswap.compressor=zstd" "zswap.max_pool_percent=50" "zswap.zpool=z3fold"
-  (initrd-modules
-    (cons*
-      ;;"zstd" "z3fold"
-      ;;"snd-pcm-oss" "snd-mixer-oss" ;; somehow don't get autoloaded but mplayer wants it by default
-      %base-initrd-modules))
-
-  ;;(initrd microcode-initrd)
-  (firmware
-    (cons* #;linux-firmware #;ath9k-htc-firmware %base-firmware))
 
   (users
    (append
@@ -194,7 +175,7 @@
             #;VIDEO "vlc" ;; "mplayer"
             #;GRAPHICS "imagemagick" "feh" ;; "fbida" "gimp" "inkscape" "qiv"
             #;MARKUP "markdown" "python-docutils" ;; "texlive" ;; "guile-commonmark"
-	    #;DOCUMENTS "evince" ;; "libreoffice" "xournal"
+            #;DOCUMENTS "evince" ;; "libreoffice" "xournal"
             #;FONT-UTILS "xfontsel" "xlsfonts" ;; "gnome-font-viewer" "fontconfig" "fontmanager"
             #;XUTILS "xdpyinfo" "xmodmap" "xrandr" "xrdb" "xset" "xsetroot" "xwininfo"
             #;XPROGS "synergy" "stumpwm" "terminator" "xterm" "xscreensaver")) ;; "ratpoison"
@@ -207,7 +188,9 @@
           #;(server-arguments '()) ;; disable the default '("-nolisten" "tcp") ;--- don't do it until we have a good firewall!
           (keyboard-layout keyboard-layout)
           (extra-config '()))) ;;TODO: set the device resolution
-      (bluetooth-service #:auto-enable? #t)
+      #;(service bluetooth-service-type
+        (bluetooth-configuration
+         (auto-enable? #t)))
       #;(service gpm-service-type)
       #;(service nix-service-type
         (nix-configuration
@@ -219,11 +202,24 @@
        (dicod-configuration
         (databases (list ;; TODO: package and add other databases?
                     %dicod-database:gcide))))
+      (service iwd-service-type
+        (iwd-configuration
+          (main-conf
+            `((Settings ((AutoConnect . #t)))))))
       (service openssh-service-type
         (openssh-configuration
           (openssh openssh)
           (x11-forwarding? #t)
-          (password-authentication? #false)
+          (permit-root-login #f)
+          (allow-empty-passwords? #f)
+          (password-authentication? #f)
+          (public-key-authentication? #t)
+          (allow-agent-forwarding? #t)
+          (allow-tcp-forwarding? #t)
+          (gateway-ports? #f)
+          (challenge-response-authentication? #f)
+          (use-pam? #t)
+          (print-last-log? #t)
           (authorized-keys
             `(("fare" ,(local-file "/home/fare/.ssh/id_rsa.pub"))
               ("root" ,(local-file "/home/fare/.ssh/id_rsa.pub"))))))
@@ -254,14 +250,17 @@
         (guix-service-type config =>
           (guix-configuration
             (inherit config)
-            (substitute-urls (cons*
-                              ;;"http://guix.drewc.ca:8080/"
-                              "https://substitutes.nonguix.org"
-                              "https://bordeaux.guix.gnu.org"
-                              %default-substitute-urls))
-            (authorized-keys (cons* (local-file "./modules/nonguix-key.pub")
-                                    (local-file "./modules/bordeaux-key.pub")
-                                    %default-authorized-guix-keys))))
+            (substitute-urls
+              (cons*
+               ;;"http://guix.drewc.ca:8080/"
+               "https://substitutes.nonguix.org"
+               "https://bordeaux.guix.gnu.org"
+               %default-substitute-urls))
+            (authorized-keys
+              (cons*
+               (local-file "./modules/nonguix-key.pub")
+               (local-file "./modules/bordeaux-key.pub")
+               %default-authorized-guix-keys))))
         (pulseaudio-service-type config =>
           (pulseaudio-configuration
            (inherit config)
